@@ -42,9 +42,9 @@ func (s *Stream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		time.Sleep(s.FrameInterval)
-		b := <-c
+		b, ok := <-c
 		_, err := w.Write(b)
-		if err != nil {
+		if err != nil || !ok {
 			break
 		}
 	}
@@ -75,6 +75,16 @@ func (s *Stream) UpdateJPEG(jpeg []byte) {
 		}
 	}
 	s.lock.Unlock()
+}
+
+func (s *Stream) CancelAll() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for c := range s.m {
+		close(c)
+		delete(s.m, c)
+	}
 }
 
 // NewStream initializes and returns a new Stream.
